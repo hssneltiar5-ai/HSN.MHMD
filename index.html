@@ -1,1 +1,294 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* =========================================
+     1. تنسيقات الـ Dashboard (النظام الأساسي)
+     ========================================= */
+  :root { --primary: #2196F3; --bg: #f5f7fa; --card: #ffffff; --text: #333; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 0; margin: 0; overflow-x: hidden; }
 
+  /* شاشة الدخول */
+  #login-section { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%); }
+  .login-card { background: white; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 90%; max-width: 400px; }
+  .login-card input { padding: 12px; border: 2px solid #ddd; border-radius: 8px; width: 80%; margin: 15px 0; font-size: 16px; text-align: center; }
+  .btn-main { background: var(--primary); color: white; padding: 12px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
+  .btn-main:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4); }
+
+  /* لوحة التحكم */
+  #dashboard-section { display: none; padding: 20px; max-width: 900px; margin: 0 auto; }
+  .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  
+  /* كارت البرسونا */
+  .persona-card { background: var(--card); padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px; border-right: 6px solid var(--primary); margin-bottom: 20px; }
+  .avatar-box { width: 70px; height: 70px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 35px; background: #e3f2fd; border: 2px solid var(--primary); }
+  .progress-bg { background: #eee; height: 10px; border-radius: 10px; margin-top: 10px; overflow: hidden; }
+  .progress-fill { background: #4CAF50; height: 100%; width: 0%; transition: width 0.6s ease; }
+
+  /* المراحل */
+  .phase-container { background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; }
+  .phase-title { font-size: 1.1em; font-weight: bold; color: #444; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+  
+  .task-item { display: flex; align-items: center; padding: 8px; border-radius: 6px; transition: 0.2s; }
+  .task-item:hover { background: #f9f9f9; }
+  .task-item input { width: 18px; height: 18px; margin-left: 10px; accent-color: var(--primary); }
+  
+  /* زر فتح المحاكاة */
+  .demo-btn { background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; cursor: pointer; margin-right: auto; }
+  .demo-btn:hover { background: #f57c00; }
+
+  /* =========================================
+     2. تنسيقات المحاكاة (Traffic Light Modal)
+     ========================================= */
+  #simulation-modal {
+      display: none; /* مخفي افتراضياً */
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #87CEEB; z-index: 9999;
+      flex-direction: column; align-items: center;
+  }
+  
+  .close-sim-btn {
+      position: absolute; top: 20px; right: 20px; z-index: 10000;
+      background: #e74c3c; color: white; border: none; padding: 10px 20px;
+      font-size: 18px; border-radius: 8px; cursor: pointer; font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  }
+
+  /* العالم الـ 3D للمحاكاة */
+  .scene { width: 100%; height: 100%; perspective: 1000px; display: flex; justify-content: center; align-items: center; margin-top: 50px;}
+  .world { position: relative; width: 1000px; height: 1000px; transform-style: preserve-3d; transform: rotateX(50deg) translateY(-100px); }
+  
+  /* الطريق */
+  .road { position: absolute; left: 50%; transform: translateX(-50%); width: 300px; height: 200%; background: #444; border-left: 20px solid #ddd; border-right: 20px solid #ddd; top: -50%; }
+  .stop-line { position: absolute; top: 50%; left: 0; width: 100%; height: 20px; background: #fff; }
+
+  /* الإشارة */
+  .traffic-post { position: absolute; top: 48%; right: 20%; width: 15px; height: 250px; background: #222; transform: rotateX(-90deg) translateZ(125px); transform-style: preserve-3d; }
+  .traffic-box { position: absolute; width: 50px; height: 120px; background: #000; top: 0; left: -17px; transform: translateZ(240px); display: flex; flex-direction: column; justify-content: space-around; align-items: center; border: 2px solid #555; padding: 5px;}
+  .light { width: 30px; height: 30px; border-radius: 50%; background: #333; transition: 0.3s; }
+  .light.active.red { background: red; box-shadow: 0 0 20px red; }
+  .light.active.green { background: lime; box-shadow: 0 0 20px lime; }
+
+  /* السيارة */
+  .car-container { position: absolute; left: 50%; bottom: -200px; width: 80px; height: 140px; transform-style: preserve-3d; z-index: 10; }
+  .cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; }
+  .face { position: absolute; border: 1px solid rgba(0,0,0,0.1); }
+  .face.top { width: 80px; height: 140px; background: #3498db; transform: translateZ(40px); }
+  .face.left { width: 40px; height: 140px; background: #2980b9; transform: rotateY(-90deg) translateZ(40px); }
+  .face.right { width: 40px; height: 140px; background: #2980b9; transform: rotateY(90deg) translateZ(40px); }
+  .face.front { width: 80px; height: 40px; background: #2980b9; transform: rotateX(-90deg) translateZ(70px); }
+  .face.back { width: 80px; height: 40px; background: #2980b9; transform: rotateX(90deg) translateZ(70px); }
+
+  /* لوحة تحكم المحاكاة */
+  .sim-controls { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 10px; display: flex; gap: 10px; }
+  .sim-btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+
+</style>
+</head>
+<body>
+
+  <div id="login-section">
+    <div class="login-card">
+      <h2>👋 بوابة تدريب الموظفين</h2>
+      <p>أدخل اسمك للدخول إلى لوحة التحكم</p>
+      <input type="text" id="username" placeholder="مثال: islam">
+      <br>
+      <button class="btn-main" onclick="handleLogin()">دخول</button>
+      <div id="loading-msg" style="display:none; margin-top:10px; color:#666;">جاري تحميل بياناتك...</div>
+    </div>
+  </div>
+
+  <div id="dashboard-section">
+    <div class="header-bar">
+      <h3>مرحباً، <span id="display-name" style="color:var(--primary);">User</span></h3>
+      <button onclick="location.reload()" style="background:none; border:none; color:red; cursor:pointer;">تسجيل خروج</button>
+    </div>
+
+    <div class="persona-card">
+      <div class="avatar-box" id="avatar">👶</div>
+      <div style="flex-grow:1;">
+        <h3 id="rank-title" style="margin:0; color:var(--primary);">New Hire</h3>
+        <p id="rank-desc" style="margin:5px 0 10px; font-size:0.9em; color:#666;">ابدأ المهام لتترقى!</p>
+        <div class="progress-bg"><div class="progress-fill" id="progress-bar"></div></div>
+        <div style="font-size:0.8em; margin-top:5px; text-align:left;" id="progress-text">0%</div>
+      </div>
+    </div>
+
+    <div class="phase-container">
+      <div class="phase-title">📌 Phase 1: الأساسيات</div>
+      <div class="task-item"><input type="checkbox" id="t1" onchange="syncData()"><label for="t1">قراءة دليل الموظف</label></div>
+      <div class="task-item"><input type="checkbox" id="t2" onchange="syncData()"><label for="t2">إعداد بيئة العمل</label></div>
+    </div>
+
+    <div class="phase-container" id="phase2">
+      <div class="phase-title" style="display:flex; align-items:center;">
+        🚀 Phase 2: المشاريع العملية
+        <button class="demo-btn" onclick="openSimulation()">📺 معاينة المشروع المطلوب</button>
+      </div>
+      <div class="task-item"><input type="checkbox" id="t3" onchange="syncData()"><label for="t3">دراسة منطق الجافاسكريبت</label></div>
+      <div class="task-item"><input type="checkbox" id="t4" onchange="syncData()"><label for="t4">بناء محاكاة إشارة المرور (كما في المعاينة)</label></div>
+    </div>
+
+    <div class="phase-container" id="phase3">
+      <div class="phase-title">🏆 Phase 3: التقييم النهائي</div>
+      <div class="task-item"><input type="checkbox" id="t5" onchange="syncData()"><label for="t5">تسليم الكود للمراجعة</label></div>
+    </div>
+  </div>
+
+  <div id="simulation-modal">
+    <button class="close-sim-btn" onclick="closeSimulation()">إغلاق المعاينة ❌</button>
+    
+    <div class="sim-controls">
+      <button class="sim-btn" style="background:#e74c3c;" onclick="setSimLight('red')">أحمر (قف)</button>
+      <button class="sim-btn" style="background:#2ecc71;" onclick="setSimLight('green')">أخضر (تحرك)</button>
+    </div>
+
+    <div class="scene">
+      <div class="world">
+        <div class="road"><div class="stop-line"></div></div>
+        
+        <div class="traffic-post">
+          <div class="traffic-box">
+            <div id="sim-red" class="light active red"></div>
+            <div id="sim-green" class="light"></div>
+          </div>
+        </div>
+
+        <div id="sim-car" class="car-container">
+          <div class="cube">
+            <div class="face front"></div><div class="face back"></div>
+            <div class="face left"></div><div class="face right"></div>
+            <div class="face top"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ==========================================
+  // ⚙️ إعدادات النظام
+  // ==========================================
+  const API_URL = "PUT_YOUR_WEB_APP_URL_HERE"; 
+  const tasks = ['t1', 't2', 't3', 't4', 't5'];
+  let currentUser = "";
+  
+  // ==========================================
+  // 1. دوال الـ Dashboard (Login & Save)
+  // ==========================================
+  function handleLogin() {
+    const userIn = document.getElementById('username').value.trim();
+    if (!userIn) return alert("الرجاء كتابة الاسم");
+
+    currentUser = userIn;
+    document.getElementById('loading-msg').style.display = 'block';
+
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "load", userId: currentUser })
+    })
+    .then(res => res.json())
+    .then(response => {
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('dashboard-section').style.display = 'block';
+      document.getElementById('display-name').innerText = currentUser;
+
+      if (response.data) {
+        tasks.forEach(id => {
+          if (response.data[id]) document.getElementById(id).checked = true;
+        });
+      }
+      updateDashboardUI();
+    })
+    .catch(err => {
+      alert("تأكد من وضع رابط الـ API الصحيح في الكود!");
+      document.getElementById('loading-msg').style.display = 'none';
+    });
+  }
+
+  function syncData() {
+    updateDashboardUI();
+    let dataObj = {};
+    tasks.forEach(id => dataObj[id] = document.getElementById(id).checked);
+
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "save", userId: currentUser, data: dataObj })
+    });
+  }
+
+  function updateDashboardUI() {
+    let checkedCount = 0;
+    tasks.forEach(id => { if (document.getElementById(id).checked) checkedCount++; });
+    let percent = Math.round((checkedCount / tasks.length) * 100);
+
+    document.getElementById('progress-bar').style.width = percent + "%";
+    document.getElementById('progress-text').innerText = percent + "%";
+
+    const avatar = document.getElementById('avatar');
+    const title = document.getElementById('rank-title');
+    
+    if (percent < 30) {
+      avatar.innerText = "👶"; title.innerText = "New Hire";
+    } else if (percent < 70) {
+      avatar.innerText = "👨‍💻"; title.innerText = "Junior Dev";
+    } else {
+      avatar.innerText = "🦁"; title.innerText = "Senior Hero";
+    }
+  }
+
+  // ==========================================
+  // 2. دوال المحاكاة (Simulation Logic)
+  // ==========================================
+  let simRunning = false;
+  let carPos = 800;
+  let simSpeed = 5;
+  let currentLight = 'red';
+  const stopLine = 400; // مكان خط التوقف في المحاكاة
+
+  function openSimulation() {
+    document.getElementById('simulation-modal').style.display = 'flex';
+    simRunning = true;
+    carPos = 800; // إعادة السيارة للبداية
+    setSimLight('red');
+    requestAnimationFrame(animateSim);
+  }
+
+  function closeSimulation() {
+    document.getElementById('simulation-modal').style.display = 'none';
+    simRunning = false;
+  }
+
+  function setSimLight(color) {
+    currentLight = color;
+    document.getElementById('sim-red').className = color === 'red' ? 'light active red' : 'light';
+    document.getElementById('sim-green').className = color === 'green' ? 'light active green' : 'light';
+  }
+
+  function animateSim() {
+    if (!simRunning) return;
+
+    // منطق حركة السيارة
+    if (currentLight === 'green') {
+        carPos -= simSpeed;
+    } else {
+        // إذا أحمر، توقف عند الخط
+        if (carPos > stopLine + 20) {
+            carPos -= simSpeed;
+        }
+    }
+
+    // إعادة السيارة إذا خرجت
+    if (carPos < -200) carPos = 800;
+
+    // تطبيق الحركة
+    const car = document.getElementById('sim-car');
+    car.style.transform = `translateX(-50%) translateY(${carPos}px) translateZ(20px)`;
+
+    requestAnimationFrame(animateSim);
+  }
+
+</script>
+</body>
+</html>
